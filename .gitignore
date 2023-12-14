@@ -157,6 +157,5 @@ cython_debug/
 
 # Project specific
 
-data/Cross/
-data/Intra/
-# checkpoints/*
+data/
+checkpoints/
