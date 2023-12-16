@@ -8,10 +8,10 @@
 - model.py: Outline of the model along with its train and test functions
 - utils.py: Utility functions mostly for loading and preprocessing data
 
-## How to run
+## How to run connors model
 1. Download the data and add it to the 'data' folder
 1. Install requirements `pip install -r requirements.txt` (Optionally do this in a python environment)
-1. Train the model `python train.py --dataset [DATASET]`
-    - DATASET can either be 'cross' or 'train'
-1. Test model `python test.py --testset [TESTSET]`
-    - TESTSET can either be 'intra', 'cross1', 'cross2' or 'cross3'
+1. Train the model `python model_connor.py --train_set [TRAIN_SET]`
+    - TRAIN_SET can either be 'cross' or 'train'
+1. Test model `python model_connor.py --test_set [TEST_SET]`
+    - TEST_SET can either be 'intra', 'cross1', 'cross2' or 'cross3'
