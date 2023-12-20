@@ -129,7 +129,7 @@ class MEGDataset(Dataset):
         to train and test the model on a sequence of n length data. Breaking up those sequences here still allows us to shuffle
         the data so it is not trained on the same task many time in a row.
 
-        NOTE: Short sequences and baches will significantly reduce the training time as it will be doing many many reads from your storage into ram.
+        NOTE: Short sequences and baches will significantly increase the training time as it will be doing many many reads from your storage into ram.
             To speed this up train on longer sequences or larger bathers.
 
         `load_all_data`: Use this to load all the data into RAM if you can spare it. Will make training much faster.
