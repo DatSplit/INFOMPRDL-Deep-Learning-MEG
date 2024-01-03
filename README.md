@@ -8,6 +8,12 @@
 - model.py: Outline of the model along with its train and test functions
 - utils.py: Utility functions mostly for loading and preprocessing data
 
+## Preprocess the data
+1. Download the data and add it to the 'data' folder
+1. Install requirements `pip install -r requirements.txt` (Optionally do this in a python environment)
+1. Run Preprocessing.py
+1. After preprocessing the data can be found in the Preprocessed_scale folder.
+
 ## How to run connors model
 1. Download the data and add it to the 'data' folder
 1. Install requirements `pip install -r requirements.txt` (Optionally do this in a python environment)
