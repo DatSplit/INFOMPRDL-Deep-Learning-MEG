@@ -5,7 +5,7 @@ import torch.nn as nn
 from typing import List, Tuple
 from torch.utils.data import DataLoader
 
-from utlis import CLASS_SIZE, DEVICE, FEATURE_SIZE, MEGDatasetType, get_dataloader
+from utils import CLASS_SIZE, DEVICE, FEATURE_SIZE, MEGDatasetType, get_dataloader
 
 
 # Hyper parameter list
