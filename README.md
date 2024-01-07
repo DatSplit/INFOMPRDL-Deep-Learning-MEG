@@ -21,3 +21,4 @@
     - TRAIN_SET can either be 'cross' or 'train'
 1. Test model `python model_connor.py --test_set [TEST_SET]`
     - TEST_SET can either be 'intra', 'cross1', 'cross2' or 'cross3'
+1. Hyperparameter tuning `python model_connor.py --hyperparameter_tuning [TRAIN_SET] [TEST_SET]`

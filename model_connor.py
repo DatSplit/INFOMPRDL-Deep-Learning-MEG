@@ -6,7 +6,9 @@ from typing import List, Tuple
 from torch.utils.data import DataLoader
 
 from utils import CLASS_SIZE, DEVICE, FEATURE_SIZE, MEGDatasetType, get_dataloader
-
+import torch.optim as optim
+import torchvision
+import itertools
 
 # Hyper parameter list
 ## Data
@@ -51,6 +53,33 @@ class LSTMModel(nn.Module):
         out = self.fc(out[:, -1, :])
         return out
 
+# Bidirectional LSTM #with self-attention
+class biLSTMModelSelfAttention(nn.Module):
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        num_layers: int,
+        num_classes: int,
+        dropout: float,
+        bidirectional: bool,
+    ):
+        super(biLSTMModelSelfAttention, self).__init__()
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.bidirectional = bidirectional
+        self.lstm = nn.LSTM(
+            input_size, hidden_size, num_layers, bidirectional=bidirectional, dropout=dropout, batch_first=True
+        )
+        self.fc = nn.Linear(hidden_size * (2 if bidirectional else 1), num_classes)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        h0 = torch.zeros(self.num_layers * (2 if self.bidirectional else 1), x.size(0), self.hidden_size).to(x.device)
+        c0 = torch.zeros(self.num_layers * (2 if self.bidirectional else 1), x.size(0), self.hidden_size).to(x.device)
+        out, _ = self.lstm(x, (h0, c0))
+        # Add attention here
+        out = self.fc(out[:, -1, :])
+        return out
 
 # Training function
 def train_model(
@@ -109,6 +138,7 @@ def test_model(dataloader, model, loss_fn, device):
     accuracy = correct / size
     accuracy = accuracy * 100
     print(f"Test Error: \n Accuracy: {accuracy:>0.1f}%, Avg loss: {test_loss:>8f} \n")
+    return test_loss, accuracy
 
 
 def main():
@@ -123,6 +153,23 @@ def main():
         "cross2": MEGDatasetType.CROSS_TEST_2,
         "cross3": MEGDatasetType.CROSS_TEST_3,
     }
+
+        # Hyper parameter list
+    ## Data
+    sequence_length = 10
+    shuffle = True
+
+    ## Training
+    training_epochs = 10
+    batch_size = 500
+    learning_rate = 0.001
+    loss_function = nn.CrossEntropyLoss()
+    optimizer_function = torch.optim.Adam
+
+    ## Model Features
+    hidden_size = 128
+    number_of_layers = 2
+    dropout = 0.2
 
     parser = argparse.ArgumentParser(description="Testing script.")
     parser.add_argument(
@@ -140,6 +187,16 @@ def main():
         choices=["cross", "intra"],
         required=False,
         help="Type of dataset to process: 'cross' or 'intra'",
+        default=None,
+    )
+
+    parser.add_argument(
+        "--hyperparameter_tuning",
+        type=str,
+        choices=["cross", "intra", "cross1", "cross2", "cross3"],
+        required=False,
+        help="Type of dataset to process: 'cross' or 'intra'",
+        nargs="+",
         default=None,
     )
     args = parser.parse_args()
@@ -185,7 +242,65 @@ def main():
 
         test_model(test_dataloader, model, loss_function, DEVICE)
 
-    if not args.test_set and not args.train_set:
+        
+        
+
+    if args.hyperparameter_tuning:
+        hyperparameters = {
+            'learning_rates': [0.001, 0.01, 0.1],
+            'batch_size': [128, 256, 500],
+            'sequence_length': [10, 20, 40, 80, 160, 500],
+            'dropout': [0.1, 0.2, 0.3, 0.4, 0.5]
+        }
+
+        hyperparameter_combinations = list(itertools.product(*[hyperparameters[key] for key in hyperparameters]))
+        print(len(hyperparameter_combinations), hyperparameter_combinations)
+
+        for lr, batch_size, seq_length, drop in hyperparameter_combinations:
+            model = LSTMModel(
+                input_size=FEATURE_SIZE,
+                hidden_size=hidden_size,
+                num_layers=number_of_layers,
+                num_classes=CLASS_SIZE,
+                dropout=drop,
+            )
+            optimizer = optimizer_function(model.parameters(), lr=lr)
+
+            train_dataloader = get_dataloader(
+                train_map[args.hyperparameter_tuning[0]],
+                batch_size=batch_size,
+                sequence_length=seq_length,
+                shuffle=shuffle,
+                load_all_data=True,
+            )
+
+            test_dataloader = get_dataloader(
+                test_map[args.hyperparameter_tuning[1]],
+                batch_size=batch_size,
+                sequence_length=seq_length,
+                shuffle=shuffle,
+                load_all_data=True,
+            )
+
+            train_model(
+                model,
+                train_dataloader,
+                loss_function,
+                optimizer,
+                num_epochs=training_epochs,
+                device=DEVICE,
+            )
+
+            loss, accuracy = test_model(test_dataloader, model, loss_function, DEVICE)
+
+            with open('hyperparameter_tuning_results.txt', 'a') as file:
+                file.write(f"Learning rate: {lr}, Batch size: {batch_size}, Sequence length: {seq_length}, Dropout: {drop}, Test loss: {loss}, Accuracy: {accuracy}\n")
+
+            torch.save(model, f"checkpoints/lr{lr}_batch_size{batch_size}_seq_length{seq_length}_dropout{drop}_model.pth")
+
+        print("Hyperparameter tuning complete")
+
+    if not args.test_set and not args.train_set and not args.hyperparameter_tuning:
         print("No Options Selected!!")
 
 

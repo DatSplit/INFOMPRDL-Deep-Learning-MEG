@@ -134,6 +134,7 @@ class MEGDataset(Dataset):
 
         `load_all_data`: Use this to load all the data into RAM if you can spare it. Will make training much faster.
         """
+        
         self._data_path = data_path
         self._files = [file_name for file_name in os.listdir(data_path)]
 
