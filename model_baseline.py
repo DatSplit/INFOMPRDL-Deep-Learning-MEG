@@ -12,6 +12,11 @@ from utils import CLASS_SIZE, DEVICE, FEATURE_SIZE, MEGDatasetType, get_dataload
 # performance of 64 improved to 0.989 with l2 regularization parameter = 0.01
 # dropout does not have a noticeable effect, slightly decreases performance
 
+# Intra accuracy = 100%
+# Cross 1 hyperparameters: 2 layers, 64 neurons, L2 = 0.01, accuracy = 0.98 or so
+# Cross 2 accuracy = 0.44
+# Cross 3 accuracy = 0.7
+
 # Data
 sequence_length = 1
 shuffle = True
@@ -26,7 +31,7 @@ optimizer_function = torch.optim.Adam
 
 # Define Neural Network
 class FFNN(nn.Module):
-    def __init__(self, input_size, hidden_size, num_classes):#, dropout_rate=0.5):
+    def __init__(self, input_size, hidden_size, num_classes):#, dropout_rate=0.3):
         super(FFNN, self).__init__()
         # Hidden Layers
         self.hidden1 = nn.Linear(input_size, hidden_size)
