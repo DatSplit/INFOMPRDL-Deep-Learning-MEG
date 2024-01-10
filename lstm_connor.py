@@ -18,7 +18,7 @@ shuffle = True
 ## Training
 training_epochs = 10
 batch_size = 500
-learning_rate = 0.001
+learning_rate = 0.00001
 loss_function = nn.CrossEntropyLoss()
 optimizer_function = torch.optim.Adam
 
@@ -102,6 +102,7 @@ def train_model(
             X = X.float().to(device)
             y = y.long().to(device)
             preds = model(X)
+
             loss = loss_fn(preds, y)
             train_losses.append(loss.item())
 

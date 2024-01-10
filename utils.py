@@ -2,7 +2,7 @@ from enum import Enum
 import numpy as np
 import os
 import numpy.typing as npt
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, random_split
 from torch.nn.utils.rnn import pad_sequence
 import torch
 
@@ -51,7 +51,8 @@ def get_dataloader(
     shuffle: bool = False,
     sequence_length=1,
     load_all_data=False,
-) -> DataLoader:
+    validation_split=0.0,
+) -> DataLoader | tuple[DataLoader, DataLoader]:
     """
     Creates and returns a DataLoader for a specific type of MEG dataset.
 
@@ -73,6 +74,9 @@ def get_dataloader(
 
     load_all_data : bool, optional (default=False)
         A flag indicating whether all the data should be loaded into memory at once. Setting this to True may increase performance but requires more memory.
+
+    validation_split: float, optional (default=0)
+        If set to a decimal value will return (train_loader, validation_loader) split by the given fraction.
 
     Returns:
     --------
@@ -113,6 +117,25 @@ def get_dataloader(
         sequence_length=sequence_length,
         load_all_data=load_all_data,
     )
+
+    if validation_split > 0 and validation_split < 1:
+        train_dataset, validation_dataset = random_split(
+            train_dataset, [1 - validation_split, validation_split]
+        )
+        return (
+            DataLoader(
+                train_dataset,
+                batch_size=batch_size,
+                shuffle=shuffle,
+                collate_fn=_pad_and_collate,
+            ),
+            DataLoader(
+                validation_dataset,
+                batch_size=batch_size,
+                shuffle=shuffle,
+                collate_fn=_pad_and_collate,
+            ),
+        )
     return DataLoader(
         train_dataset,
         batch_size=batch_size,
