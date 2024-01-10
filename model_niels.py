@@ -29,9 +29,38 @@ hidden_size = 128
 number_of_layers = 2
 dropout = 0.2
 
+    
+class SelfAttentionLayer(nn.Module):
+    def __init__(self, feature_size):
+        super(SelfAttentionLayer, self).__init__()
+        self.feature_size = feature_size
 
-# Define the LSTM model
-class LSTMModel(nn.Module):
+        # Linear transformations for Q, K, V from the same source
+        self.key = nn.Linear(feature_size, feature_size)
+        self.query = nn.Linear(feature_size, feature_size)
+        self.value = nn.Linear(feature_size, feature_size)
+
+    
+    def forward(self, x):
+        # Apply linear transformations
+        keys = self.key(x)
+        queries = self.query(x)
+        values = self.value(x)
+
+        # Scaled dot-product attention
+        
+        scores = torch.matmul(queries, keys.transpose(-2, -1)) / torch.sqrt(torch.tensor(self.feature_size, dtype=torch.float32))
+
+        # Apply softmax
+        attention_weights = F.softmax(scores, dim=-1)
+
+        # Multiply weights with values
+        output = torch.matmul(attention_weights, values)
+
+        return output, attention_weights
+    
+# Bidirectional LSTM with self-attention
+class biLSTMModelSelfAttention(nn.Module):
     def __init__(
         self,
         input_size: int,
@@ -39,19 +68,23 @@ class LSTMModel(nn.Module):
         num_layers: int,
         num_classes: int,
         dropout: float,
+        bidirectional: bool,
     ):
-        super(LSTMModel, self).__init__()
+        super(biLSTMModelSelfAttention, self).__init__()
         self.hidden_size = hidden_size
         self.num_layers = num_layers
+        self.bidirectional = bidirectional
         self.lstm = nn.LSTM(
-            input_size, hidden_size, num_layers, dropout=dropout, batch_first=True
+            input_size, hidden_size, num_layers, bidirectional=bidirectional, dropout=dropout, batch_first=True
         )
-        self.fc = nn.Linear(hidden_size, num_classes)
+        self.attention = SelfAttentionLayer(hidden_size * 2)
+        self.fc = nn.Linear(hidden_size * 2 , num_classes)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
-        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
+        h0 = torch.zeros(self.num_layers * 2, x.size(0), self.hidden_size).to(x.device)
+        c0 = torch.zeros(self.num_layers * 2, x.size(0), self.hidden_size).to(x.device)
         out, _ = self.lstm(x, (h0, c0))
+        out, _ = self.attention(out)
         out = self.fc(out[:, -1, :])
         return out
 
@@ -143,9 +176,9 @@ def main():
         "cross3": MEGDatasetType.CROSS_TEST_3,
     }
 
-    # Hyper parameter list
+        # Hyper parameter list
     ## Data
-    sequence_length = 500
+    sequence_length = 300
     shuffle = True
 
     ## Training
@@ -180,7 +213,7 @@ def main():
     )
 
     parser.add_argument(
-        "--hyperparameter_tuning", ##--hyperparameter_tuning cross cross2
+        "--hyperparameter_tuning",
         type=str,
         choices=["cross", "intra", "cross1", "cross2", "cross3"],
         required=False,
@@ -189,14 +222,15 @@ def main():
         default=None,
     )
     args = parser.parse_args()
-    model = LSTMModel(
+
+    model = biLSTMModelSelfAttention(
         input_size=FEATURE_SIZE,
         hidden_size=hidden_size,
         num_layers=number_of_layers,
         num_classes=CLASS_SIZE,
         dropout=dropout,
+        bidirectional=True,
     )
-
     optimizer = optimizer_function(model.parameters(), lr=learning_rate)
 
     if args.train_set:
@@ -225,7 +259,6 @@ def main():
             sequence_length=sequence_length,
             load_all_data=True,
         )
-
         if "cross" in args.test_set:
             model = torch.load("checkpoints/cross_model.pth")
         else:
@@ -248,13 +281,16 @@ def main():
         print(len(hyperparameter_combinations), hyperparameter_combinations)
 
         for lr, batch_size, seq_length, drop in hyperparameter_combinations:
-            model = LSTMModel(
+            model = biLSTMModelSelfAttention(
                 input_size=FEATURE_SIZE,
                 hidden_size=hidden_size,
                 num_layers=number_of_layers,
                 num_classes=CLASS_SIZE,
                 dropout=drop,
+                bidirectional=True,
             )
+
+
             optimizer = optimizer_function(model.parameters(), lr=lr)
 
             train_dataloader = get_dataloader(
