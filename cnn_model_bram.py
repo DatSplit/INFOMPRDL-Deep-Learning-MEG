@@ -19,18 +19,18 @@ else:
 
 # Hyper parameter list
 ## Data
-sequence_length = 10
+sequence_length = 1
 shuffle = True
 
 ## Training
-training_epochs = 10
+training_epochs = 2
 batch_size = 500
 learning_rate = 0.003
 loss_function = nn.CrossEntropyLoss()
 optimizer_function = torch.optim.Adam
 
 ## Model Features
-#hidden_size = 128
+hidden_size = 64
 #number_of_layers = 2
 dropout = 0.2
 kernel_size = 8
@@ -42,29 +42,37 @@ pool_stride = 2
 class CNNModel(nn.Module):
     def __init__(
             self, 
+            input_size: int,
+            hidden_size: int,
+            num_classes: int,
             kernel_size: int,
             stride: int,
             padding: int,
             pool_size: int,
             pool_stride: int,
             dropout: float
-            #add layer sizes
             ):
         super(CNNModel, self).__init__()
         
         #First convolution layer     
         self.conv_1 = nn.Sequential(
-            nn.Conv2d(10, 32, kernel_size=kernel_size, stride=stride, padding=padding),
+            nn.Conv2d(1, 32, kernel_size=kernel_size, stride=stride, padding=padding),
             nn.BatchNorm2d(32),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=pool_size, stride=pool_stride))
+        
+        #bigger hidden layer?
+        #per timestep?
 
         #Second convolution layer       
         self.conv_2 = nn.Sequential(
-            nn.Conv2d(32, 60, kernel_size=kernel_size, stride=stride, padding=padding),
-            nn.BatchNorm2d(60),
+            nn.Conv2d(32, 64, kernel_size=kernel_size, stride=stride, padding=padding),
+            nn.BatchNorm2d(64),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=pool_size, stride=pool_stride))
+        
+        # Activation function
+        self.relu = nn.ReLU()
         
         #add dropout? 
         #Dropout
@@ -72,30 +80,38 @@ class CNNModel(nn.Module):
      
 
         #Fully connected layers
-        self.fc1 = nn.Linear(7*7*32, 128)       
-        self.fc2 = nn.Linear(128, 10)        
+        self.fc1 = nn.Linear(input_size, hidden_size)       
+        self.fc2 = nn.Linear(hidden_size, num_classes)      
+        #128  
         
     def forward(self, x):  
         # Reshape the tensor 
         out = self.conv_1(x)
+        out = self.relu(out)
         out = self.conv_2(out)
+        out = self.relu(out)
         out = out.view(out.size(0), -1)
         #dropout?
-        out = self.dropout(out)
+        #out = self.dropout(out)
+
         # Calculate the flattened size
+        #print("out.size: " + str(out.size()))
         flattened_size = out.size(1)
+        #print("flattened size: " + str(flattened_size))
 
         # Adjust the input size of first linear layer to match the flattened size
-        self.fc1 = nn.Linear(flattened_size, 128)
+        self.fc1 = nn.Linear(flattened_size, hidden_size)
 
         out = self.fc1(out)
+        out = self.relu(out)
 
         # Apply an activation function (if needed)
         # out = torch.relu(out)
 
+        out=self.dropout(out)
         out = self.fc2(out)
 
-        out=self.dropout(out)
+       
         # out = self.fc1(out)
         # out = self.fc2(out)        
         out = F.log_softmax(out,dim=1)                                
@@ -123,13 +139,15 @@ def train_model(
         for i, (X, y) in enumerate(train_loader):
             X = X.float().to(device)  
             #print(X.size())
+            X = X.unsqueeze(3)
+
             # X = X.unsqueeze(1) # adds dimension add index 1
             # Need to add dimension add index 3?
-            X = X.unsqueeze(3)
+           
             #X = X.reshape(500, 10, 248, 248)  
             #print(X.size())
             # X = X.permute(0, 2, 3, 1)
-            # print(X.size())
+            #print(X.size())
             y = y.long().to(device)
             preds = model(X)
             loss = loss_fn(preds, y)
@@ -188,7 +206,6 @@ def main():
         "cross2": MEGDatasetType.CROSS_TEST_2,
         "cross3": MEGDatasetType.CROSS_TEST_3,
     }
-
     parser = argparse.ArgumentParser(description="Testing script.")
     parser.add_argument(
         "--test_set",
@@ -209,12 +226,15 @@ def main():
     )
     args = parser.parse_args()
     model = CNNModel(
+        input_size=FEATURE_SIZE,
+        hidden_size=hidden_size,
+        num_classes=CLASS_SIZE,
         kernel_size = kernel_size,
         stride = stride,
         padding=padding,
         pool_size=pool_size,
         pool_stride=pool_stride,
-        dropout=dropout
+        dropout=dropout,
     )
     optimizer = optimizer_function(model.parameters(), lr=learning_rate)
     if args.train_set:
