@@ -24,7 +24,7 @@ sequence_length = 1
 shuffle = True
 
 ## Training
-training_epochs = 4
+training_epochs = 2
 batch_size = 500
 learning_rate = 0.001
 loss_function = nn.CrossEntropyLoss()
@@ -32,7 +32,7 @@ optimizer_function = torch.optim.Adam
 
 ## Model Features
 hidden_size = 128
-#number_of_layers = 2
+number_of_layers = 2
 dropout = 0.2
 kernel_size = 6
 stride = 1
@@ -40,11 +40,12 @@ padding = 3
 pool_size = 2
 pool_stride = 2
 
-class CNNModel(nn.Module):
+class CNN_LSTM_Model(nn.Module):
     def __init__(
             self, 
             input_size: int,
             hidden_size: int,
+            num_layers: int,
             num_classes: int,
             kernel_size: int,
             stride: int,
@@ -53,69 +54,28 @@ class CNNModel(nn.Module):
             pool_stride: int,
             dropout: float
             ):
-        super(CNNModel, self).__init__()
-        
-        #First convolution layer     
-        self.conv_1 = nn.Sequential(
-            nn.Conv1d(1, 32, kernel_size=kernel_size, stride=stride, padding=padding),
-            nn.BatchNorm1d(32),
-            nn.ReLU(),
-            nn.MaxPool1d(kernel_size=pool_size, stride=pool_stride))
-        
-        #bigger hidden layer?
-        #per timestep?
-
-        #Second convolution layer       
-        self.conv_2 = nn.Sequential(
-            nn.Conv1d(32, 64, kernel_size=kernel_size, stride=stride, padding=padding),
-            nn.BatchNorm1d(64),
-            nn.ReLU(),
-            nn.MaxPool1d(kernel_size=pool_size, stride=pool_stride))
-        
-        # Activation function
+        super(CNN_LSTM_Model, self).__init__()
+        self.conv1 = nn.Conv1d(in_channels=1, out_channels=32, kernel_size=kernel_size, stride=stride, padding=padding)
+        self.batchnorm1 = nn.BatchNorm1d(32)
         self.relu = nn.ReLU()
-        
-        #add dropout? 
-        #Dropout
-        self.dropout = nn.Dropout(p=dropout)
-     
+        self.pool = nn.MaxPool1d(kernel_size=pool_size, stride=pool_stride)
+        self.conv2 = nn.Conv1d(in_channels=32, out_channels=64, kernel_size=kernel_size, stride=stride, padding=padding)
+        self.batchnorm2 = nn.BatchNorm1d(64)
+        self.lstm = nn.LSTM(input_size=64, hidden_size=hidden_size, num_layers=num_layers, batch_first=True)
+        self.fc = nn.Linear(hidden_size, num_classes)
 
-        #Fully connected layers
-        self.fc1 = nn.Linear(input_size, hidden_size)       
-        self.fc2 = nn.Linear(hidden_size, num_classes)      
-        #128  
-        
-    def forward(self, x):  
-        # Reshape the tensor 
-        out = self.conv_1(x)
-        out = self.relu(out)
-        out = self.conv_2(out)
-        out = self.relu(out)
-        out = out.view(out.size(0), -1)
-        #dropout?
-        #out = self.dropout(out)
-
-        # Calculate the flattened size
-        #print("out.size: " + str(out.size()))
-        flattened_size = out.size(1)
-        #print("flattened size: " + str(flattened_size))
-
-        # Adjust the input size of first linear layer to match the flattened size
-        self.fc1 = nn.Linear(flattened_size, hidden_size)
-
-        out = self.fc1(out)
-        out = self.relu(out)
-
-        # Apply an activation function (if needed)
-        # out = torch.relu(out)
-
-        out=self.dropout(out)
-        out = self.fc2(out)
-
-       
-        # out = self.fc1(out)
-        # out = self.fc2(out)        
-        out = F.log_softmax(out,dim=1)                                
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.batchnorm1(x)
+        x = self.relu(x)
+        x = self.pool(x)
+        x = self.conv2(x)
+        x = self.batchnorm2(x)
+        x = self.relu(x)
+        x = self.pool(x)
+        x = x.view(x.size(0), x.size(2), -1)
+        out, _ = self.lstm(x)
+        out = self.fc(out[:, -1, :])
         return out
 
 # Training function
@@ -243,7 +203,7 @@ def main():
     shuffle = True
 
     ## Training
-    training_epochs = 4
+    training_epochs = 2
     batch_size = 500
     learning_rate = 0.001
     loss_function = nn.CrossEntropyLoss()
@@ -251,7 +211,7 @@ def main():
 
     ## Model Features
     hidden_size = 128
-    #number_of_layers = 2
+    number_of_layers = 2
     dropout = 0.2
     kernel_size = 6
     stride = 1
@@ -259,9 +219,10 @@ def main():
     pool_size = 2
     pool_stride = 2
 
-    model = CNNModel(
+    model = CNN_LSTM_Model(
         input_size=FEATURE_SIZE,
         hidden_size=hidden_size,
+        num_layers=number_of_layers,
         num_classes=CLASS_SIZE,
         kernel_size = kernel_size,
         stride = stride,
@@ -328,9 +289,10 @@ def main():
             kernel_size = 3
             padding = 2
 
-            model = CNNModel(
+            model = CNN_LSTM_Model(
                 input_size=FEATURE_SIZE,
                 hidden_size=hidden_size,
+                num_layers=number_of_layers,
                 num_classes=CLASS_SIZE,
                 kernel_size = kernel_size,
                 stride = stride,
@@ -378,9 +340,10 @@ def main():
             kernel_size = 6
             padding = 3
 
-            model = CNNModel(
+            model = CNN_LSTM_Model(
                 input_size=FEATURE_SIZE,
                 hidden_size=hidden_size,
+                num_layers=number_of_layers,
                 num_classes=CLASS_SIZE,
                 kernel_size = kernel_size,
                 stride = stride,
@@ -411,9 +374,10 @@ def main():
             kernel_size = 9
             padding = 5
 
-            model = CNNModel(
+            model = CNN_LSTM_Model(
                 input_size=FEATURE_SIZE,
                 hidden_size=hidden_size,
+                num_layers=number_of_layers,
                 num_classes=CLASS_SIZE,
                 kernel_size = kernel_size,
                 stride = stride,
