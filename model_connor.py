@@ -145,19 +145,19 @@ def main():
 
     # Hyper parameter list
     ## Data
-    sequence_length = 500
+    sequence_length = 10
     shuffle = True
 
     ## Training
     training_epochs = 10
-    batch_size = 500
+    batch_size = 64
     learning_rate = 0.001
     loss_function = nn.CrossEntropyLoss()
     optimizer_function = torch.optim.Adam
 
     ## Model Features
     hidden_size = 128
-    number_of_layers = 2
+    number_of_layers = 10
     dropout = 0.2
 
     parser = argparse.ArgumentParser(description="Testing script.")
