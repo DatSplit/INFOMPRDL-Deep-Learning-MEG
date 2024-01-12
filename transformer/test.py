@@ -20,3 +20,4 @@ def test_model(dataloader, model, loss_fn, device):
     accuracy = correct / size
     accuracy = accuracy * 100
     print(f"Test Error: \n Accuracy: {accuracy:>0.1f}%, Avg loss: {test_loss:>8f} \n")
+    return accuracy

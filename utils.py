@@ -6,7 +6,7 @@ from torch.utils.data import Dataset, DataLoader, random_split
 from torch.nn.utils.rnn import pad_sequence
 import torch
 
-DATA_ROOT = "Preprocessed_scale"
+DATA_ROOT = "/Preprocessed"
 
 INTRA_TRAIN_PATH = f"{DATA_ROOT}/Intra/train"
 INTRA_TEST_PATH = f"{DATA_ROOT}/Intra/test"
@@ -44,6 +44,7 @@ class MEGDatasetType(Enum):
     CROSS_TEST_2 = 5
     CROSS_TEST_3 = 6
 
+torch.manual_seed(42)
 
 def get_dataloader(
     dataset_type: MEGDatasetType,
