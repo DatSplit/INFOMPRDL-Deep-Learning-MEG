@@ -6,7 +6,7 @@ from torch.utils.data import Dataset, DataLoader, random_split
 from torch.nn.utils.rnn import pad_sequence
 import torch
 
-DATA_ROOT = "/Preprocessed"
+DATA_ROOT = "Preprocessed"
 
 INTRA_TRAIN_PATH = f"{DATA_ROOT}/Intra/train"
 INTRA_TEST_PATH = f"{DATA_ROOT}/Intra/test"
